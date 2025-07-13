@@ -11,6 +11,7 @@ import {
 import { Clouds } from '@takram/three-clouds/r3f'
 import { Globe } from '../helpers/Globe'
 import { Geodetic, PointOfView, radians } from '@takram/three-geospatial'
+import { createPrimitiveHouse, exportHouseAsGLB, downloadGLB } from './createPrimitiveHouse'
 import './LAMappingTool.css'
 
 // LA Points data for reference markers
@@ -43,7 +44,8 @@ interface Model3D {
   rotation: { x: number; y: number; z: number }
   scale: number
   mesh?: Object3D
-  type: 'blender' | 'preset'
+  type: 'blender' | 'preset' | 'primitive'
+  glbPath?: string
 }
 
 interface ModelLoadingProps {
@@ -52,110 +54,100 @@ interface ModelLoadingProps {
 }
 
 export const ModelLoadingDialog: React.FC<ModelLoadingProps> = ({ onModelLoad, onClose }) => {
-  const [modelType, setModelType] = useState<'blender' | 'preset'>('blender')
-  const [modelFile, setModelFile] = useState<File | null>(null)
-  const [presetHouse, setPresetHouse] = useState<string>('')
-  const [modelName, setModelName] = useState<string>('')
+  const [modelName, setModelName] = useState('')
+  const [modelType, setModelType] = useState<'blender' | 'preset' | 'primitive'>('primitive')
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  const presetHouses = [
-    'modern-house-1',
-    'villa-mediterranean',
-    'cottage-rustic',
-    'mansion-luxury',
-    'cabin-mountain',
-    'apartment-urban'
-  ]
+  const handleLoadModel = async () => {
+    if (!modelName.trim()) return
 
-  const handleLoadModel = () => {
-    if (!modelName) return
-
-    const newModel: Model3D = {
-      id: Date.now().toString(),
-      name: modelName,
-      position: { lat: LA_BOUNDS.center.lat, lng: LA_BOUNDS.center.lng, elevation: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: 1,
-      type: modelType
+    if (modelType === 'primitive') {
+      setIsGenerating(true)
+      try {
+        // Generate and download GLB file
+        const blob = await exportHouseAsGLB()
+        downloadGLB(blob, `${modelName}-house.glb`)
+        
+        // Create model with primitive house geometry
+        const newModel: Model3D = {
+          id: Date.now().toString(),
+          name: modelName,
+          position: { lat: 34.0549, lng: -118.2427, elevation: 0 }, // Default to LA center
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: 1,
+          type: 'primitive'
+        }
+        
+        onModelLoad(newModel)
+        onClose()
+      } catch (error) {
+        console.error('Error generating house:', error)
+      } finally {
+        setIsGenerating(false)
+      }
+    } else {
+      // Handle other model types (blender, preset)
+      const newModel: Model3D = {
+        id: Date.now().toString(),
+        name: modelName,
+        position: { lat: 34.0549, lng: -118.2427, elevation: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: 1,
+        type: modelType
+      }
+      
+      onModelLoad(newModel)
+      onClose()
     }
-
-    onModelLoad(newModel)
-    onClose()
   }
 
   return (
-    <div className="model-loading-dialog">
-      <div className="dialog-content">
-        <h3>Add 3D Model</h3>
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h2>🏠 Add 3D Model</h2>
         
-        <div className="model-type-selector">
-          <label>
-            <input
-              type="radio"
-              value="blender"
-              checked={modelType === 'blender'}
-              onChange={(e) => setModelType(e.target.value as 'blender' | 'preset')}
-            />
-            Add Blender Model
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="preset"
-              checked={modelType === 'preset'}
-              onChange={(e) => setModelType(e.target.value as 'blender' | 'preset')}
-            />
-            Choose Preset House
-          </label>
+        <div className="form-group">
+          <label>Model Name:</label>
+          <input
+            type="text"
+            value={modelName}
+            onChange={(e) => setModelName(e.target.value)}
+            placeholder="Enter model name"
+          />
         </div>
 
-        {modelType === 'blender' && (
-          <div className="blender-upload">
-            <label>
-              Upload Model File:
-              <input
-                type="file"
-                accept=".glb,.gltf,.obj,.fbx"
-                onChange={(e) => setModelFile(e.target.files?.[0] || null)}
-              />
-            </label>
-            <p className="note">Supports .glb, .gltf, .obj, .fbx files. No textures will be loaded - raw geometry only.</p>
+        <div className="form-group">
+          <label>Model Type:</label>
+          <select 
+            value={modelType} 
+            onChange={(e) => setModelType(e.target.value as 'blender' | 'preset' | 'primitive')}
+          >
+            <option value="primitive">🏠 Primitive House (Generated)</option>
+            <option value="blender">📁 Blender Model (Upload GLB)</option>
+            <option value="preset">🎁 Preset House</option>
+          </select>
+        </div>
+
+        {modelType === 'primitive' && (
+          <div className="info-box">
+            <p>🎨 This will generate a simple house with:</p>
+            <ul>
+              <li>Brown cube base</li>
+              <li>Cone roof</li>
+              <li>Door and window</li>
+              <li>Downloads as GLB file</li>
+            </ul>
           </div>
         )}
 
-        {modelType === 'preset' && (
-          <div className="preset-selector">
-            <label>
-              Choose Preset House:
-              <select 
-                value={presetHouse} 
-                onChange={(e) => setPresetHouse(e.target.value)}
-              >
-                <option value="">Select a house...</option>
-                {presetHouses.map(house => (
-                  <option key={house} value={house}>{house}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
-
-        <div className="model-name">
-          <label>
-            Model Name:
-            <input
-              type="text"
-              value={modelName}
-              onChange={(e) => setModelName(e.target.value)}
-              placeholder="Enter model name"
-            />
-          </label>
-        </div>
-
-        <div className="dialog-actions">
-          <button onClick={handleLoadModel} disabled={!modelName}>
-            Load Model
-          </button>
+        <div className="modal-actions">
           <button onClick={onClose}>Cancel</button>
+          <button 
+            onClick={handleLoadModel} 
+            disabled={!modelName.trim() || isGenerating}
+          >
+            {isGenerating ? 'Generating...' : 'Load Model'}
+          </button>
         </div>
       </div>
     </div>
@@ -303,11 +295,19 @@ export const PositioningControls: React.FC<PositioningControlsProps> = ({ model,
 
 const Model3DComponent: React.FC<{ model: Model3D; onClick: () => void }> = ({ model, onClick }) => {
   const group = useRef<Group>(null)
-  const { scene } = useThree()
+  const [houseGeometry, setHouseGeometry] = useState<Group | null>(null)
 
   // Convert lat/lng to 3D coordinates
   const geodetic = new Geodetic(model.position.lng, model.position.lat, model.position.elevation * 0.3048) // ft to meters
   const worldPosition = geodetic.toECEF()
+
+  // Create house geometry when model type is primitive
+  useEffect(() => {
+    if (model.type === 'primitive') {
+      const house = createPrimitiveHouse()
+      setHouseGeometry(house)
+    }
+  }, [model.type])
 
   useFrame(() => {
     if (group.current) {
@@ -321,13 +321,31 @@ const Model3DComponent: React.FC<{ model: Model3D; onClick: () => void }> = ({ m
     }
   })
 
-  // Create a simple placeholder mesh (box) for now
-  const geometry = new BoxGeometry(10, 10, 10)
-  const material = new MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.7 })
+  // Render different content based on model type
+  const renderModel = () => {
+    if (model.type === 'primitive' && houseGeometry) {
+      return <primitive object={houseGeometry.clone()} />
+    }
+    
+    if (model.glbPath) {
+      // For GLB files (when implemented)
+      try {
+        const { scene } = useGLTF(model.glbPath)
+        return <primitive object={scene.clone()} />
+      } catch (error) {
+        console.warn('Failed to load GLB:', error)
+      }
+    }
+    
+    // Fallback: Create a placeholder mesh (box)
+    const geometry = new BoxGeometry(10, 10, 10)
+    const material = new MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.7 })
+    return <mesh geometry={geometry} material={material} />
+  }
 
   return (
     <group ref={group} onClick={onClick}>
-      <mesh geometry={geometry} material={material} />
+      {renderModel()}
     </group>
   )
 }
