@@ -1,4 +1,4 @@
-`import type { StoryFn } from '@storybook/react'
+import type { StoryFn } from '@storybook/react'
 import Story from './LA-GeoJSON-Story_house_model'
 
 export default {
@@ -25,4 +25,4 @@ export const WithHousesAndOrbs: StoryFn = () => {
       coverage={0.4}
     />
   )
-} `
+}
