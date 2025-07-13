@@ -115,8 +115,8 @@ export const Default: StoryFn = () => {
           rotation: LA_CAMERA_ROTATION
         }}
       >
+        <LAMappingTool models={models} onModelClick={handleModelClick} />
         <EffectComposer multisampling={0} enableNormalPass>
-          <LAMappingTool models={models} onModelClick={handleModelClick} />
           <ToneMapping mode={ToneMappingMode.AGX} />
         </EffectComposer>
       </Canvas>
@@ -190,8 +190,8 @@ export const WithInitialModels: StoryFn = () => {
           rotation: LA_CAMERA_ROTATION
         }}
       >
+        <LAMappingTool models={models} onModelClick={handleModelClick} />
         <EffectComposer multisampling={0} enableNormalPass>
-          <LAMappingTool models={models} onModelClick={handleModelClick} />
           <ToneMapping mode={ToneMappingMode.AGX} />
         </EffectComposer>
       </Canvas>
