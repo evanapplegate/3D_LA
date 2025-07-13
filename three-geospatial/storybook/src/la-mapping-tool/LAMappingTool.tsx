@@ -1,16 +1,14 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import { Vector3, Euler, Object3D, Group, MeshBasicMaterial, BoxGeometry, Mesh } from 'three'
 import { 
   Atmosphere, 
-  AerialPerspective, 
   Sky, 
   Stars 
 } from '@takram/three-atmosphere/r3f'
-import { Clouds } from '@takram/three-clouds/r3f'
 import { Globe } from '../helpers/Globe'
-import { Geodetic, PointOfView, radians } from '@takram/three-geospatial'
+import { Geodetic, radians } from '@takram/three-geospatial'
 import { createPrimitiveHouse, exportHouseAsGLB, downloadGLB } from './createPrimitiveHouse'
 import './LAMappingTool.css'
 
@@ -107,8 +105,10 @@ export const ModelLoadingDialog: React.FC<ModelLoadingProps> = ({ onModelLoad, o
         <h2>🏠 Add 3D Model</h2>
         
         <div className="form-group">
-          <label>Model Name:</label>
+          <label htmlFor="modelName">Model Name:</label>
           <input
+            id="modelName"
+            name="modelName"
             type="text"
             value={modelName}
             onChange={(e) => setModelName(e.target.value)}
@@ -117,8 +117,10 @@ export const ModelLoadingDialog: React.FC<ModelLoadingProps> = ({ onModelLoad, o
         </div>
 
         <div className="form-group">
-          <label>Model Type:</label>
+          <label htmlFor="modelType">Model Type:</label>
           <select 
+            id="modelType"
+            name="modelType"
             value={modelType} 
             onChange={(e) => setModelType(e.target.value as 'blender' | 'preset' | 'primitive')}
           >
@@ -379,17 +381,6 @@ const LAScene: React.FC<{
   onModelClick: (model: Model3D) => void
 }> = ({ models, onModelClick }) => {
   const atmosphereRef = useRef<any>(null)
-  const { camera } = useThree()
-
-  // Set initial camera position to LA area
-  useEffect(() => {
-    const pov = new PointOfView()
-    const target = new Geodetic(radians(LA_BOUNDS.center.lng), radians(LA_BOUNDS.center.lat), 0).toECEF()
-    pov.distance = 10000 // 10km distance
-    pov.heading = radians(-90)
-    pov.pitch = radians(-45)
-    pov.decompose(target, camera.position, camera.quaternion, camera.up)
-  }, [camera])
 
   useFrame(() => {
     if (atmosphereRef.current) {
