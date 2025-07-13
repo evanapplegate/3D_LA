@@ -481,19 +481,20 @@ const Scene: FC<SceneProps> = ({
     collapsed: true
   })
 
-  useLayoutEffect(() => {
-    const geodetic = new Geodetic(
-      radians(longitude),
-      radians(latitude),
-      0
-    )
-    const target = geodetic.toECEF()
-    const pov = new PointOfView()
-    pov.distance = distance
-    pov.heading = radians(heading)
-    pov.pitch = radians(pitch)
-    pov.decompose(target, camera2.position, camera2.quaternion, camera2.up)
-  }, [camera2, longitude, latitude, heading, pitch, distance])
+  // Camera position is controlled by story, not scene
+  // useLayoutEffect(() => {
+  //   const geodetic = new Geodetic(
+  //     radians(longitude),
+  //     radians(latitude),
+  //     0
+  //   )
+  //   const target = geodetic.toECEF()
+  //   const pov = new PointOfView()
+  //   pov.distance = distance
+  //   pov.heading = radians(heading)
+  //   pov.pitch = radians(pitch)
+  //   pov.decompose(target, camera2.position, camera2.quaternion, camera2.up)
+  // }, [camera2, longitude, latitude, heading, pitch, distance])
 
   useKeyboardControl(camera2, {
     moveSpeed: 1000,
@@ -607,12 +608,17 @@ const Scene: FC<SceneProps> = ({
   )
 }
 
-export default {
-  title: 'Clouds / LA GeoJSON Integration_house_model',
-  component: Scene,
-  parameters: {
-    layout: 'fullscreen'
-  }
-} as const
+export const Story: FC<SceneProps> = props => {
+  useGoogleMapsAPIKeyControls()
+  return (
+    <>
+      <Canvas gl={{ depth: false }}>
+        <Stats />
+        <Scene {...props} />
+      </Canvas>
+      <GoogleMapsAPIKeyPrompt />
+    </>
+  )
+}
 
-export { Scene } 
+export default Story 
