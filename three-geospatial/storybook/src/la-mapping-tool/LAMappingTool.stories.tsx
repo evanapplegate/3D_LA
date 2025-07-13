@@ -3,6 +3,8 @@ import React from 'react'
 import { Canvas } from '@react-three/fiber'
 import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
+import { AerialPerspective } from '@takram/three-atmosphere/r3f'
+import { Clouds } from '@takram/three-clouds/r3f'
 import LAMappingTool, { useLAMappingTool, ModelLoadingDialog, PositioningControls } from './LAMappingTool'
 import './LAMappingTool.css'
 
@@ -117,6 +119,15 @@ export const Default: StoryFn = () => {
       >
         <LAMappingTool models={models} onModelClick={handleModelClick} />
         <EffectComposer multisampling={0} enableNormalPass>
+          <Clouds />
+          <AerialPerspective
+            sunLight
+            skyLight
+            transmittance
+            inscatter
+            correctGeometricError
+            albedoScale={2 / Math.PI}
+          />
           <ToneMapping mode={ToneMappingMode.AGX} />
         </EffectComposer>
       </Canvas>
@@ -192,6 +203,15 @@ export const WithInitialModels: StoryFn = () => {
       >
         <LAMappingTool models={models} onModelClick={handleModelClick} />
         <EffectComposer multisampling={0} enableNormalPass>
+          <Clouds />
+          <AerialPerspective
+            sunLight
+            skyLight
+            transmittance
+            inscatter
+            correctGeometricError
+            albedoScale={2 / Math.PI}
+          />
           <ToneMapping mode={ToneMappingMode.AGX} />
         </EffectComposer>
       </Canvas>

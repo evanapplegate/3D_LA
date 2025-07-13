@@ -401,7 +401,6 @@ const LAScene: React.FC<{
     <Atmosphere ref={atmosphereRef} correctAltitude={true}>
       <Sky />
       <Stars data="atmosphere/stars.bin" />
-      <Clouds />
       <Globe>
         <OrbitControls 
           enableDamping
@@ -423,14 +422,6 @@ const LAScene: React.FC<{
           <LAPointMarker key={point.name} point={point} />
         ))}
       </Globe>
-      <AerialPerspective
-        sunLight
-        skyLight
-        transmittance
-        inscatter
-        correctGeometricError
-        albedoScale={2 / Math.PI}
-      />
     </Atmosphere>
   )
 }
