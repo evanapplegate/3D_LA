@@ -1,0 +1,409 @@
+/* Main container styles are now handled by storybook */
+
+.toolbar {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 300px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.add-model-btn {
+  width: 100%;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.add-model-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.model-list {
+  margin-top: 20px;
+}
+
+.model-list h3 {
+  color: #333;
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.model-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.model-item:last-child {
+  border-bottom: none;
+}
+
+.model-item span {
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.model-item button {
+  padding: 6px 12px;
+  margin-left: 8px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.model-item button:first-of-type {
+  background: #4CAF50;
+  color: white;
+}
+
+.model-item button:first-of-type:hover {
+  background: #45a049;
+}
+
+.model-item button:last-of-type {
+  background: #f44336;
+  color: white;
+}
+
+.model-item button:last-of-type:hover {
+  background: #da190b;
+}
+
+.canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.model-loading-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.dialog-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-content h3 {
+  color: #333;
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.model-type-selector {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.model-type-selector label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.model-type-selector input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #667eea;
+}
+
+.blender-upload,
+.preset-selector,
+.model-name {
+  margin-bottom: 20px;
+}
+
+.blender-upload label,
+.preset-selector label,
+.model-name label {
+  display: block;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.blender-upload input[type="file"],
+.preset-selector select,
+.model-name input[type="text"] {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.blender-upload input[type="file"]:focus,
+.preset-selector select:focus,
+.model-name input[type="text"]:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.note {
+  color: #666;
+  font-size: 12px;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 30px;
+}
+
+.dialog-actions button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 80px;
+}
+
+.dialog-actions button:first-child {
+  background: #667eea;
+  color: white;
+}
+
+.dialog-actions button:first-child:hover {
+  background: #5a6fd8;
+}
+
+.dialog-actions button:first-child:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.dialog-actions button:last-child {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.dialog-actions button:last-child:hover {
+  background: #e0e0e0;
+}
+
+.positioning-controls {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  z-index: 1500;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 320px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.controls-content h3 {
+  color: #333;
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.control-group {
+  margin-bottom: 25px;
+}
+
+.control-group h4 {
+  color: #333;
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 5px;
+}
+
+.control-group label {
+  display: block;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.control-group input[type="number"] {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.control-group input[type="number"]:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.control-group input[type="range"] {
+  width: calc(100% - 60px);
+  margin-right: 10px;
+  accent-color: #667eea;
+}
+
+.control-group span {
+  color: #666;
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 50px;
+  display: inline-block;
+}
+
+/* Model and location labels removed - no longer using Html components in 3D scene */
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .toolbar {
+    width: 250px;
+    top: 10px;
+    left: 10px;
+  }
+  
+  .positioning-controls {
+    width: 280px;
+    right: 10px;
+  }
+  
+  .dialog-content {
+    padding: 20px;
+    margin: 20px;
+  }
+}
+
+/* Scrollbar styling */
+.toolbar::-webkit-scrollbar,
+.positioning-controls::-webkit-scrollbar,
+.dialog-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.toolbar::-webkit-scrollbar-track,
+.positioning-controls::-webkit-scrollbar-track,
+.dialog-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.toolbar::-webkit-scrollbar-thumb,
+.positioning-controls::-webkit-scrollbar-thumb,
+.dialog-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.toolbar::-webkit-scrollbar-thumb:hover,
+.positioning-controls::-webkit-scrollbar-thumb:hover,
+.dialog-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Loading state */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Animation for model placement */
+.model-placement-hint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 1500;
+  pointer-events: none;
+  animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+} 
