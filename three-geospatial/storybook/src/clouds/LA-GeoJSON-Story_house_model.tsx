@@ -53,7 +53,7 @@ import { useCloudsControls } from './helpers/useCloudsControls'
 import { useAtomValue } from 'jotai'
 import { googleMapsApiKeyAtom } from '../helpers/states'
 import { createPrimitiveHouse } from '../la-mapping-tool/createPrimitiveHouse'
-import { elevationService } from '../helpers/elevationService'
+import { getElevationForLocations } from '../helpers/elevationService'
 
 // Function to get minimum elevation for a path
 async function getMinElevationForPath(
@@ -64,13 +64,12 @@ async function getMinElevationForPath(
   if (!apiKey || coordinates.length === 0) return 0
   
   try {
-    const elevations = await elevationService.getElevationsForPath(
+    const elevations = await getElevationForLocations(
       coordinates,
-      apiKey,
-      samples
+      apiKey
     )
     
-    return Math.min(...elevations.map(e => e.elevation))
+    return Math.min(...elevations)
   } catch (error) {
     console.error('Error getting elevation for path:', error)
     return 0
@@ -86,13 +85,12 @@ async function getElevationForPoint(
   if (!apiKey) return 0
   
   try {
-    const elevations = await elevationService.getElevationsForPath(
+    const elevations = await getElevationForLocations(
       [{ lat, lng }],
-      apiKey,
-      1
+      apiKey
     )
     
-    return elevations[0]?.elevation || 0
+    return elevations[0] || 0
   } catch (error) {
     console.error('Error getting elevation for point:', error)
     return 0
