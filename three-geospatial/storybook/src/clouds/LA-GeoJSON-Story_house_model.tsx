@@ -474,7 +474,8 @@ const Scene: FC<SceneProps> = ({
   const [clouds, setClouds] = useState<CloudsEffect | null>(null)
 
   const [{ enabled, toneMapping }, cloudsProps] = useCloudsControls(clouds, {
-    coverage
+    coverage,
+    layerControls: false
   })
 
   // Camera position is controlled by story, not scene
