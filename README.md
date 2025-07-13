@@ -1,5 +1,8 @@
 # 3D_LA
 
+> **Based on [@takram-design-engineering/three-geospatial](https://github.com/takram-design-engineering/three-geospatial)**  
+> This project builds upon the excellent geospatial rendering libraries developed by Takram Design Engineering.
+
 A 3D geospatial visualization project featuring atmospheric rendering, volumetric clouds, and Los Angeles mapping tools built with Three.js and React.
 
 ## Features
