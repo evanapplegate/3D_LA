@@ -473,10 +473,8 @@ const Scene: FC<SceneProps> = ({
   const camera2 = useThree(({ camera }) => camera)
   const [clouds, setClouds] = useState<CloudsEffect | null>(null)
 
-  const cloudsProps = useCloudsControls({
-    coverage,
-    clouds,
-    collapsed: true
+  const [{ enabled, toneMapping }, cloudsProps] = useCloudsControls(clouds, {
+    coverage
   })
 
   // Camera position is controlled by story, not scene
