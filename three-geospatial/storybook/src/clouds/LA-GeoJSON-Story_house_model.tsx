@@ -351,8 +351,8 @@ const Scene: FC<SceneProps> = ({
   longitude = -118.242643,
   latitude = 34.0549076,
   heading = -110,
-  pitch = -25,
-  distance = 15000,
+  pitch = -60,
+  distance = 800,
   coverage = 0.4,
   ...localDate
 }) => {

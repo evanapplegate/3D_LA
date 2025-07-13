@@ -1,4 +1,4 @@
-import type { StoryFn } from '@storybook/react'
+`import type { StoryFn } from '@storybook/react'
 import Story from './LA-GeoJSON-Story_house_model'
 
 export default {
@@ -20,9 +20,9 @@ export const WithHousesAndOrbs: StoryFn = () => {
       longitude={-118.242643}
       latitude={34.0549076}
       heading={-110}
-      pitch={-25}
-      distance={15000}
+      pitch={-60}
+      distance={800}
       coverage={0.4}
     />
   )
-} 
+} `
