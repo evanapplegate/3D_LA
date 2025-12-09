@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Car Flip Physics Sim</title>
+  <style>
+    body { margin: 0; padding: 0; overflow: hidden; font-family: monospace; }
+    #info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: #fff; padding: 10px; font-size: 11px; z-index: 100; }
+    #grid { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); width: 100vw; height: 100vh; }
+    .sim-container { position: relative; border: 1px solid #333; }
+    .sim-canvas { width: 100%; height: 100%; display: block; }
+    .energy { position: absolute; bottom: 5px; left: 5px; color: #0f0; font-size: 10px; }
+  </style>
+</head>
+<body>
+  <div id="grid"></div>
+  <div id="info">5x5 Car Flip Simulations<br>Loading...</div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.177.0/build/three.module.js",
+        "three/": "https://unpkg.com/three@0.177.0/",
+        "cannon": "https://unpkg.com/cannon@0.20.0/build/cannon.min.js",
+        "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js",
+        "3d-tiles-renderer": "https://unpkg.com/3d-tiles-renderer@0.4.10/dist/index.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import * as CANNON from 'cannon-es';
+
+    const LAT = 43.5943;
+    const LON = -118.6279;
+    const GRID_SIZE = 5;
+    const CAR_SPEED_MPH = 50;
+    const CAR_SPEED_MS = CAR_SPEED_MPH * 0.44704; // m/s
+    const DRIVER_MASS = 75; // kg
+
+    const sims = [];
+    const energyData = [];
+
+    function degToRad(deg) { return deg * Math.PI / 180; }
+    function radToDeg(rad) { return rad * 180 / Math.PI; }
+
+    // Convert lat/lon to ECEF
+    function latLonToECEF(lat, lon, height = 0) {
+      const a = 6378137; // WGS84 semi-major axis
+      const e2 = 0.00669437999014; // WGS84 first eccentricity squared
+      const latRad = degToRad(lat);
+      const lonRad = degToRad(lon);
+      const N = a / Math.sqrt(1 - e2 * Math.sin(latRad) * Math.sin(latRad));
+      const x = (N + height) * Math.cos(latRad) * Math.cos(lonRad);
+      const y = (N + height) * Math.cos(latRad) * Math.sin(lonRad);
+      const z = (N * (1 - e2) + height) * Math.sin(latRad);
+      return new THREE.Vector3(x, y, z);
+    }
+
+    class CarFlipSim {
+      constructor(container, index) {
+        this.container = container;
+        this.index = index;
+        this.energyJoules = 0;
+        this.driverBody = null;
+        this.carBody = null;
+        this.fenceBodies = [];
+        this.lastDriverVel = new CANNON.Vec3();
+        
+        this.init();
+      }
+
+      init() {
+        try {
+          // Scene
+          const width = this.container.clientWidth;
+          const height = this.container.clientHeight;
+          this.scene = new THREE.Scene();
+          this.scene.background = new THREE.Color(0x000000);
+
+          // Camera
+          this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 10000);
+          this.camera.position.set(0, 50, 100);
+          this.camera.lookAt(0, 0, 0);
+
+          // Renderer
+          this.renderer = new THREE.WebGLRenderer({ antialias: true, canvas: this.container.querySelector('canvas') || undefined });
+          if (!this.container.querySelector('canvas')) {
+            this.renderer.domElement.className = 'sim-canvas';
+            this.container.appendChild(this.renderer.domElement);
+          }
+          this.renderer.setSize(width, height);
+          this.renderer.shadowMap.enabled = true;
+
+          // Physics world
+          this.world = new CANNON.World();
+          this.world.gravity.set(0, -9.82, 0);
+          this.world.broadphase = new CANNON.NaiveBroadphase();
+          this.world.solver.iterations = 10;
+
+          // Ground
+          const groundShape = new CANNON.Plane();
+          const groundBody = new CANNON.Body({ mass: 0 });
+          groundBody.addShape(groundShape);
+          groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+          groundBody.position.set(0, 0, 0);
+          this.world.addBody(groundBody);
+
+          const groundMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(200, 200),
+            new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide })
+          );
+          groundMesh.rotation.x = -Math.PI / 2;
+          this.scene.add(groundMesh);
+
+          // Load terrain (async, but don't block)
+          this.loadTerrain().catch(err => {
+            console.error(`Sim ${this.index} terrain load failed:`, err);
+          });
+
+          // Create fence
+          this.createFence();
+
+          // Create car
+          this.createCar();
+
+          // Energy display
+          const energyDiv = document.createElement('div');
+          energyDiv.className = 'energy';
+          energyDiv.id = `energy-${this.index}`;
+          this.container.appendChild(energyDiv);
+
+          // Start simulation
+          this.animate();
+        } catch (error) {
+          console.error(`Sim ${this.index} init error:`, error);
+          this.logError(error);
+        }
+      }
+
+      async loadTerrain() {
+        try {
+          // Attempt to load Google 3D tiles
+          // Note: Requires Google Maps API key - set window.GOOGLE_MAPS_API_KEY
+          const apiKey = window.GOOGLE_MAPS_API_KEY || '';
+          
+          if (apiKey) {
+            try {
+              // Use 3d-tiles-renderer for Google tiles
+              const { TilesRenderer } = await import('3d-tiles-renderer');
+              const tilesRenderer = new TilesRenderer(
+                `https://tile.googleapis.com/v1/3dtiles/root.json?key=${apiKey}`
+              );
+              
+              // Set camera for culling
+              tilesRenderer.setCamera(this.camera);
+              tilesRenderer.setResolutionFromRenderer(this.camera, this.renderer);
+              
+              // Add to scene
+              this.scene.add(tilesRenderer.group);
+              
+              // Update in animation loop
+              this.tilesRenderer = tilesRenderer;
+              
+              console.log(`Sim ${this.index}: Google 3D tiles loading`);
+              return;
+            } catch (tilesError) {
+              console.warn(`Sim ${this.index}: Google tiles failed, using fallback:`, tilesError);
+            }
+          }
+          
+          // Fallback: simple terrain mesh
+          const terrainGeometry = new THREE.PlaneGeometry(200, 200, 20, 20);
+          const vertices = terrainGeometry.attributes.position.array;
+          for (let i = 0; i < vertices.length; i += 3) {
+            const x = vertices[i];
+            const z = vertices[i + 2];
+            vertices[i + 1] = Math.sin(x * 0.03) * Math.cos(z * 0.03) * 2;
+          }
+          terrainGeometry.computeVertexNormals();
+          
+          const terrain = new THREE.Mesh(
+            terrainGeometry,
+            new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true })
+          );
+          terrain.rotation.x = -Math.PI / 2;
+          terrain.position.y = 0;
+          this.scene.add(terrain);
+        } catch (error) {
+          console.error(`Sim ${this.index} terrain error:`, error);
+          this.logError(error);
+        }
+      }
+
+      createFence() {
+        const fenceHeight = 1.5;
+        const fenceLength = 20;
+        const postSpacing = 2;
+        const numPosts = Math.floor(fenceLength / postSpacing) + 1;
+        const wireSpacing = 0.3;
+        const numWires = 5;
+        this.fenceMeshes = [];
+
+        // Posts (rigid, anchored)
+        const postBodies = [];
+        for (let i = 0; i < numPosts; i++) {
+          const x = -fenceLength / 2 + i * postSpacing;
+          const postShape = new CANNON.Box(new CANNON.Vec3(0.05, fenceHeight / 2, 0.05));
+          const postBody = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC });
+          postBody.addShape(postShape);
+          postBody.position.set(x, fenceHeight / 2, 0);
+          this.world.addBody(postBody);
+          postBodies.push(postBody);
+
+          const postMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.1, fenceHeight, 0.1),
+            new THREE.MeshBasicMaterial({ color: 0x666666 })
+          );
+          postMesh.position.set(x, fenceHeight / 2, 0);
+          postMesh.userData.body = postBody;
+          this.scene.add(postMesh);
+        }
+
+        // Wires (deformable chain of connected segments)
+        for (let wire = 0; wire < numWires; wire++) {
+          const y = wire * wireSpacing + 0.2;
+          const segmentsPerSpan = 3;
+          const totalSegments = (numPosts - 1) * segmentsPerSpan;
+          
+          for (let seg = 0; seg < totalSegments; seg++) {
+            const spanIndex = Math.floor(seg / segmentsPerSpan);
+            const segInSpan = seg % segmentsPerSpan;
+            const x1 = -fenceLength / 2 + spanIndex * postSpacing;
+            const x2 = -fenceLength / 2 + (spanIndex + 1) * postSpacing;
+            const segLength = postSpacing / segmentsPerSpan;
+            const x = x1 + (segInSpan + 0.5) * segLength;
+
+            // Wire segment body (small mass, can deform)
+            const wireShape = new CANNON.Box(new CANNON.Vec3(segLength / 2, 0.01, 0.01));
+            const wireBody = new CANNON.Body({ mass: 0.05 });
+            wireBody.addShape(wireShape);
+            wireBody.position.set(x, y, 0);
+            wireBody.material = new CANNON.Material('wire');
+            wireBody.material.friction = 0.1;
+            wireBody.material.restitution = 0.1;
+            this.world.addBody(wireBody);
+            this.fenceBodies.push(wireBody);
+
+            // Connect to previous segment or post
+            if (seg === 0 || segInSpan === 0) {
+              // Connect to post
+              const postIndex = seg === 0 ? spanIndex : spanIndex + 1;
+              const postBody = postBodies[postIndex];
+              const constraint = new CANNON.PointToPointConstraint(
+                wireBody,
+                new CANNON.Vec3(-segLength / 2, 0, 0),
+                postBody,
+                new CANNON.Vec3(0, y - postBody.position.y, 0)
+              );
+              constraint.maxForce = 1000; // Strong but allows some give
+              this.world.addConstraint(constraint);
+            } else {
+              // Connect to previous wire segment
+              const prevWire = this.fenceBodies[this.fenceBodies.length - 2];
+              const constraint = new CANNON.PointToPointConstraint(
+                wireBody,
+                new CANNON.Vec3(-segLength / 2, 0, 0),
+                prevWire,
+                new CANNON.Vec3(segLength / 2, 0, 0)
+              );
+              constraint.maxForce = 500; // Flexible connection
+              this.world.addConstraint(constraint);
+            }
+
+            // Wire mesh
+            const wireMesh = new THREE.Mesh(
+              new THREE.BoxGeometry(segLength, 0.02, 0.02),
+              new THREE.MeshBasicMaterial({ color: 0x888888 })
+            );
+            wireMesh.position.set(x, y, 0);
+            wireMesh.userData.body = wireBody;
+            this.fenceMeshes.push(wireMesh);
+            this.scene.add(wireMesh);
+          }
+        }
+      }
+
+      createCar() {
+        // Car body (box)
+        const carWidth = 1.8;
+        const carHeight = 1.5;
+        const carLength = 4.5;
+        const carMass = 1500; // kg
+
+        const carShape = new CANNON.Box(new CANNON.Vec3(carLength / 2, carHeight / 2, carWidth / 2));
+        this.carBody = new CANNON.Body({ mass: carMass });
+        this.carBody.addShape(carShape);
+        this.carBody.position.set(-25, 2.5, 0);
+        
+        // Initial velocity for turn apex flip
+        // Car is at apex of turn, losing traction, starting to flip
+        const turnRadius = 25;
+        const centripetalAccel = (CAR_SPEED_MS * CAR_SPEED_MS) / turnRadius;
+        this.carBody.velocity.set(CAR_SPEED_MS * 0.9, 0, 0); // Slightly reduced speed at apex
+        
+        // Angular velocity for flip (combination of roll and pitch)
+        this.carBody.angularVelocity.set(1.5, 0.3, 0.2); // Roll (flip), pitch, yaw
+        
+        // Initial orientation - car leaning into turn, starting to tip
+        this.carBody.quaternion.setFromEuler(0.2, 0, 0.1); // Slight pitch and roll
+        
+        this.carBody.material = new CANNON.Material('car');
+        this.carBody.material.friction = 0.7;
+        this.carBody.material.restitution = 0.1;
+        this.world.addBody(this.carBody);
+
+        const carMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(carLength, carHeight, carWidth),
+          new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
+        );
+        carMesh.userData.body = this.carBody;
+        this.scene.add(carMesh);
+
+        // Driver (point mass inside car, positioned at driver seat)
+        const driverShape = new CANNON.Sphere(0.25);
+        this.driverBody = new CANNON.Body({ mass: DRIVER_MASS });
+        this.driverBody.addShape(driverShape);
+        this.driverBody.position.set(-25, 2.8, 0.3); // Slightly offset for driver position
+        this.driverBody.material = new CANNON.Material('driver');
+        this.driverBody.material.friction = 0.8;
+        this.world.addBody(this.driverBody);
+
+        // Constrain driver to car (seatbelt simulation - allows some movement)
+        this.driverConstraint = new CANNON.PointToPointConstraint(
+          this.driverBody,
+          new CANNON.Vec3(0, 0, 0),
+          this.carBody,
+          new CANNON.Vec3(-0.5, 0.3, 0.3) // Driver seat position
+        );
+        this.driverConstraint.maxForce = 8000; // Seatbelt strength (allows some give before breaking)
+        this.world.addConstraint(this.driverConstraint);
+
+        const driverMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.25, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+        );
+        driverMesh.userData.body = this.driverBody;
+        this.scene.add(driverMesh);
+
+        // Track driver energy from impacts
+        this.lastDriverVel = new CANNON.Vec3();
+        this.lastDriverVel.copy(this.driverBody.velocity);
+        this.driverBody.addEventListener('collide', (e) => {
+          const contact = e.contact;
+          const impactVel = contact.getImpactVelocityAlongNormal();
+          if (Math.abs(impactVel) > 0.1) {
+            // Energy from impact: E = 0.5 * m * v^2
+            const impactEnergy = 0.5 * DRIVER_MASS * impactVel * impactVel;
+            this.energyJoules += Math.abs(impactEnergy);
+          }
+        });
+      }
+
+      animate() {
+        requestAnimationFrame(() => this.animate());
+
+        try {
+          // Step physics
+          this.world.step(1/60);
+          
+          // Update tiles renderer if present
+          if (this.tilesRenderer) {
+            this.tilesRenderer.update();
+          }
+
+          // Update meshes
+          this.scene.traverse((obj) => {
+            if (obj.userData.body) {
+              obj.position.copy(obj.userData.body.position);
+              obj.quaternion.copy(obj.userData.body.quaternion);
+            }
+          });
+
+          // Calculate driver kinetic energy changes from sudden accelerations
+          const driverVel = this.driverBody.velocity;
+          const driverAccel = new CANNON.Vec3();
+          driverAccel.vsub(driverVel, this.lastDriverVel);
+          driverAccel.scale(60); // Convert to m/s^2 (assuming 60fps)
+          
+          const accelMagnitude = driverAccel.length();
+          if (accelMagnitude > 5) { // Significant acceleration (g-force > 0.5g)
+            // Energy imparted = force * distance, approximated as m * a * delta_t
+            // More accurately: work done = change in kinetic energy
+            const currentKE = 0.5 * DRIVER_MASS * driverVel.length() * driverVel.length();
+            const lastKE = 0.5 * DRIVER_MASS * this.lastDriverVel.length() * this.lastDriverVel.length();
+            const deltaKE = Math.abs(currentKE - lastKE);
+            if (deltaKE > 5) { // Threshold for significant energy transfer
+              this.energyJoules += deltaKE;
+            }
+          }
+          this.lastDriverVel.copy(driverVel);
+          
+          // Update fence meshes
+          if (this.fenceMeshes) {
+            this.fenceMeshes.forEach(mesh => {
+              if (mesh.userData.body) {
+                mesh.position.copy(mesh.userData.body.position);
+                mesh.quaternion.copy(mesh.userData.body.quaternion);
+              }
+            });
+          }
+
+          // Update energy display
+          const energyDiv = document.getElementById(`energy-${this.index}`);
+          if (energyDiv) {
+            energyDiv.textContent = `E: ${this.energyJoules.toFixed(1)}J`;
+          }
+
+          // Store final energy
+          energyData[this.index] = this.energyJoules;
+
+          // Render
+          this.renderer.render(this.scene, this.camera);
+        } catch (error) {
+          console.error(`Sim ${this.index} animate error:`, error);
+          this.logError(error);
+        }
+      }
+
+      logError(error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'position:absolute;top:5px;right:5px;color:#f00;font-size:10px;';
+        errorDiv.textContent = `ERR: ${error.message}`;
+        this.container.appendChild(errorDiv);
+        console.error(`Sim ${this.index}:`, error);
+      }
+    }
+
+    // Initialize grid
+    const grid = document.getElementById('grid');
+    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+      const container = document.createElement('div');
+      container.className = 'sim-container';
+      const canvas = document.createElement('canvas');
+      container.appendChild(canvas);
+      grid.appendChild(container);
+      
+      const sim = new CarFlipSim(container, i);
+      sims.push(sim);
+    }
+
+    // Update info
+    setInterval(() => {
+      const totalEnergy = energyData.reduce((a, b) => (a || 0) + (b || 0), 0);
+      const avgEnergy = totalEnergy / (GRID_SIZE * GRID_SIZE);
+      document.getElementById('info').innerHTML = 
+        `5x5 Car Flip Simulations<br>` +
+        `Avg Energy: ${avgEnergy.toFixed(1)}J<br>` +
+        `Location: ${LAT}, ${LON}`;
+    }, 1000);
+
+    // Export energy data
+    window.getEnergyData = () => {
+      const data = {};
+      for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+        data[`sim_${i}`] = energyData[i] || 0;
+      }
+      return data;
+    };
+
+    console.log('All simulations initialized');
+    console.log('To load Google 3D tiles, set: window.GOOGLE_MAPS_API_KEY = "your-key"');
+    console.log('Energy data available via: window.getEnergyData()');
+  </script>
+</body>
+</html>
